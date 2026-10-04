@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LMZ (Linearni matematični zapis) → Wordove enačbe</title>
+<style>
+  :root {
+    --bg: #f5f6f8;
+    --panel: #ffffff;
+    --border: #e2e5ea;
+    --text: #1f2430;
+    --muted: #6b7280;
+    --accent: #2563eb;
+    --accent-hover: #1d4ed8;
+    --danger: #dc2626;
+    --ok: #15803d;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+  }
+  header {
+    padding: 14px 20px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  header h1 { font-size: 16px; margin: 0; font-weight: 650; letter-spacing: -0.01em; }
+  .spacer { flex: 1; }
+  .toolbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  input[type="text"] {
+    font-family: var(--mono);
+    font-size: 13px;
+    padding: 7px 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: #fff;
+    color: var(--text);
+    width: 180px;
+  }
+  select {
+    font-size: 13px;
+    padding: 7px 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: #fff;
+    color: var(--text);
+    cursor: pointer;
+  }
+  .field { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--muted); }
+  .field.check { cursor: pointer; user-select: none; }
+  input[type="text"]:focus, textarea:focus, select:focus { outline: 2px solid rgba(37,99,235,.35); outline-offset: 0; }
+  button {
+    font-size: 14px;
+    font-weight: 600;
+    padding: 8px 16px;
+    border: none;
+    border-radius: 8px;
+    background: var(--accent);
+    color: #fff;
+    cursor: pointer;
+    transition: background .15s ease;
+  }
+  button:hover:not(:disabled) { background: var(--accent-hover); }
+  button:disabled { opacity: .55; cursor: default; }
+  button.ghost { background: #eef1f6; color: var(--text); }
+  button.ghost:hover:not(:disabled) { background: #e3e8f0; }
+  main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    padding: 14px 20px 20px;
+    min-height: 0;
+  }
+  .pane {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+    box-shadow: 0 1px 2px rgba(16,24,40,.04);
+  }
+  .pane-head {
+    padding: 8px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  textarea {
+    flex: 1;
+    resize: none;
+    border: none;
+    padding: 16px;
+    font-family: var(--mono);
+    font-size: 13.5px;
+    line-height: 1.7;
+    color: var(--text);
+    background: transparent;
+    min-height: 0;
+  }
+  textarea:focus { outline: none; }
+  #preview { flex: 1; overflow: auto; padding: 6px 10px 16px; min-height: 0; }
+  .eq-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 8px;
+    border-bottom: 1px solid #f0f2f5;
+  }
+  .eq-row:last-child { border-bottom: none; }
+  .eq-num {
+    flex: 0 0 auto;
+    margin-top: 3px;
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    background: #eef1f6;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-variant-numeric: tabular-nums;
+  }
+  .eq-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+  .eq-body { min-width: 0; overflow-x: auto; overflow-y: hidden; font-size: 17px; }
+  .eq-body mjx-container { margin: 0 !important; }
+  .eq-src { font-family: var(--mono); font-size: 11.5px; color: var(--muted); white-space: pre-wrap; word-break: break-word; line-height: 1.4; }
+  #preview.hide-src .eq-src { display: none; }
+  .eq-dl {
+    flex: 0 0 auto;
+    margin-top: 3px;
+    font-size: 11.5px;
+    font-weight: 600;
+    padding: 5px 9px;
+    border-radius: 6px;
+    background: #eef1f6;
+    color: var(--muted);
+  }
+  .eq-dl:hover:not(:disabled) { background: #e3e8f0; color: var(--text); }
+  .eq-head {
+    margin: 16px 8px 2px;
+    font-size: 11.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: #94a3b8;
+  }
+  .eq-head:first-child { margin-top: 4px; }
+  .empty { color: var(--muted); padding: 24px 12px; font-size: 14px; }
+  #status { font-size: 12.5px; color: var(--muted); min-height: 18px; padding: 0 20px 16px; }
+  #status.error { color: var(--danger); }
+  #status.ok { color: var(--ok); }
+  .dot { display:inline-block; width:8px; height:8px; border-radius:50%; background: var(--muted); margin-right:6px; vertical-align: middle; }
+  .dot.busy { background: var(--accent); animation: pulse 1s infinite ease-in-out; }
+  .dot.ready { background: var(--ok); }
+  @keyframes pulse { 0%,100%{opacity:.35} 50%{opacity:1} }
+  @media (max-width: 860px) {
+    main { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; }
+  }
+</style>
+<script>
+  window.MathJax = {
+    startup: { typeset: false },
+    options: { enableMenu: false },
+    tex: { processEscapes: true }
+  };
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+<header>
+  <div>
+    <h1>LMZ (Linearni matematični zapis) &rarr; Wordove enačbe</h1>
+  </div>
+  <div class="spacer"></div>
+  <div class="toolbar">
+    <label class="field check" id="showtex-wrap"><input type="checkbox" id="showtex" checked> Prikaži LaTeX</label>
+    <label class="field">Vnos
+      <select id="mode" aria-label="Zapis vnosa">
+        <option value="lmz">LMZ (slovenski)</option>
+        <option value="latex">LaTeX</option>
+      </select>
+    </label>
+    <button id="download-all">Prenesi vse .docx</button>
+  </div>
+</header>
+
+<main>
+  <section class="pane">
+    <div class="pane-head"><span>Vnos (ena formula na vrstico)</span></div>
+    <textarea id="input" spellcheck="false" autocomplete="off">x =\ul{-b \pm \kor{b^{2} -4ac}}{2a}
+\int_{0}^{\nesk} e^{-x^{2}} dx =\ul{\kor{\pi}}{2}
+\sum_{i=1}^{n} i =\ul{n(n+1)}{2}
+\alfa \le \beta \sledi \gama >0
+\vek{AB} +\vek{x} =\vek{AD}</textarea>
+  </section>
+
+  <section class="pane">
+    <div class="pane-head"><span>Predogled</span><span id="count"></span></div>
+    <div id="preview"></div>
+  </section>
+</main>
+
+<footer>
+  <div id="status"><span class="dot busy"></span>Nalaganje matematičnega pogona…</div>
+</footer>
+
+<script type="module">
+import { mml2omml } from 'https://cdn.jsdelivr.net/npm/mathml2omml@0.5.0/dist/index.esm.js';
+import { zipSync, strToU8 } from 'https://cdn.jsdelivr.net/npm/fflate@0.8.2/esm/browser.js';
+
+/* ------------------------------------------------------------------ *
+ * DOM refs + status                                                   *
+ * ------------------------------------------------------------------ */
+const inputEl = document.getElementById('input');
+const previewEl = document.getElementById('preview');
+const statusEl = document.getElementById('status');
+const countEl = document.getElementById('count');
+const downloadAllBtn = document.getElementById('download-all');
+const modeEl = document.getElementById('mode');
+const showTexEl = document.getElementById('showtex');
+const showTexWrap = document.getElementById('showtex-wrap');
+
+function store(key, value) { try { localStorage.setItem(key, value); } catch (e) { /* ignore */ } }
+function load(key) { try { return localStorage.getItem(key); } catch (e) { return null; } }
+
+function setStatus(text, kind) {
+  const dot = '<span class="dot ' + (kind === 'busy' ? 'busy' : kind === 'ready' ? 'ready' : '') + '"></span>';
+  statusEl.className = kind === 'error' ? 'error' : kind === 'ok' ? 'ok' : '';
+  statusEl.innerHTML = dot + text;
+}
+
+function formatFormulaCount(n) {
+  if (!n) return '';
+  const mod100 = n % 100;
+  if (mod100 === 1) return `${n} formula`;
+  if (mod100 === 2) return `${n} formuli`;
+  if (mod100 === 3 || mod100 === 4) return `${n} formule`;
+  return `${n} formul`;
+}
+
+function formatEqDownloaded(n) {
+  const mod100 = n % 100;
+  if (mod100 === 1) return `Prenesena ${n} enačba.`;
+  if (mod100 === 2) return `Preneseni ${n} enačbi.`;
+  if (mod100 === 3 || mod100 === 4) return `Prenesene ${n} enačbe.`;
+  return `Prenesenih ${n} enačb.`;
+}
+
+function formatSkippedLines(lines) {
+  const n = lines.length;
+  const mod100 = n % 100;
+  let word = 'vrstic';
+  let prefix = 'Preskočenih';
+  if (mod100 === 1) { prefix = 'Preskočena'; word = 'vrstica'; }
+  else if (mod100 === 2) { prefix = 'Preskočeni'; word = 'vrstici'; }
+  else if (mod100 === 3 || mod100 === 4) { prefix = 'Preskočene'; word = 'vrstice'; }
+  return `${prefix} ${word} ${lines.join(', ')} (napaka TeX).`;
+}
+
+/* ------------------------------------------------------------------ *
+ * MathJax readiness                                                   *
+ * ------------------------------------------------------------------ */
+const mathReady = (async () => {
+  const started = Date.now();
+  while (!(window.MathJax && window.MathJax.startup && window.MathJax.startup.promise)) {
+    if (Date.now() - started > 90000) {
+      throw new Error('Nalaganje MathJaxa ni uspelo. Preverite internetno povezavo in osvežite stran.');
+    }
+    await new Promise((r) => setTimeout(r, 100));
+  }
+  await window.MathJax.startup.promise;
+})();
+
+/* ------------------------------------------------------------------ *
+ * Input parsing                                                       *
+ * ------------------------------------------------------------------ */
+function rawFormulas(text) {
+  return text
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0 && !line.startsWith('%'));
+}
+
+function currentMode() {
+  return modeEl.value === 'latex' ? 'latex' : 'lmz';
+}
+
+function toLatex(line) {
+  return currentMode() === 'lmz' ? translateLMZ(line) : line;
+}
+
+function parsedFormulas(text) {
+  return rawFormulas(text).map(toLatex);
+}
+
+/* ------------------------------------------------------------------ *
+ * LMZ -> LaTeX translation                                            *
+ *                                                                     *
+ * LMZ = Linearni matematični zapis za slepe (Center IRIS, 2019).      *
+ * Source (accessible DOCX and the PDF):                               *
+ *   DOCX: http://center-iris.si/files/2019/10/dostopno_za-slepe_LMZ_Linearni-matematični-zapis-za-slepe.docx
+ *   PDF:  http://center-iris.si/files/2019/10/Linearni-matematični-zapis-za-slepe.pdf
+ *                                                                     *
+ * LMZ mirrors LaTeX's argument syntax, so most commands are a plain   *
+ * rename (e.g. \ul{6}{3} -> \frac{6}{3}). Only the infix \nad needs a  *
+ * structural rewrite. Chemistry bonds (\1vez, ...) are not covered.    *
+ * ------------------------------------------------------------------ */
+/* ==== LMZ TRANSLATOR (pure) START ==== */
+const LMZ_MAP = {
+  // structured commands (identical argument syntax to LaTeX)
+  ul: '\\frac', kor: '\\sqrt', vek: '\\vec', 'črta': '\\overline',
+  // Greek letters
+  alfa: '\\alpha', beta: '\\beta', gama: '\\gamma', delta: '\\delta',
+  epsilon: '\\varepsilon', zeta: '\\zeta', eta: '\\eta', theta: '\\theta',
+  jota: '\\iota', kapa: '\\kappa', lambda: '\\lambda', mi: '\\mu', ni: '\\nu',
+  ksi: '\\xi', omikron: 'ο', pi: '\\pi', ro: '\\rho', sigma: '\\sigma',
+  tau: '\\tau', ipsilon: '\\upsilon', fi: '\\phi', hi: '\\chi', psi: '\\psi',
+  omega: '\\omega',
+  // sets
+  el: '\\in', nel: '\\notin', uni: '\\cup', pre: '\\cap',
+  podm: '\\subset', npodm: '\\not\\subset', nesk: '\\infty',
+  // relations
+  nen: '\\ne', ne: '\\ne', neq: '\\ne', prib: '\\approx',
+  soraz: '\\propto', pdb: '\\sim',
+  // logic
+  neg: '\\neg', hkrati: '\\land', ali: '\\lor', sledi: '\\Rightarrow',
+  ekv: '\\Leftrightarrow', vsak: '\\forall', eks: '\\exists',
+  // geometry
+  pk: '\\perp', vz: '\\parallel', nvz: '\\nparallel', tri: '\\triangle',
+  kot: '\\angle', sklad: '\\cong',
+  // functions / misc
+  presl: '\\mapsto', komp: '\\circ', v: '\\to', promil: '\\text{‰}',
+};
+
+function translateLMZ(text) {
+  let s = String(text);
+
+  // Binomial coefficient (infix): (A \nad B) and (A) \nad B.
+  s = s.replace(/\(([^()]*)\\nad\s*([^()]*)\)/g, (m, a, b) => '\\binom{' + a.trim() + '}{' + b.trim() + '}');
+  s = s.replace(/\(([^()]*)\)\s*\\nad\s*([A-Za-z0-9]+|\([^()]*\))/g, (m, a, b) => '\\binom{' + a.trim() + '}{' + b.trim() + '}');
+
+  // "does not divide": a \ne |b  ->  a \nmid b
+  s = s.replace(/\\ne\s*\|\s*/g, '\\nmid ');
+
+  // Command aliases: match the whole command token and look it up, so that
+  // \nesk / \ne, \presl / \pre, \vz / \v, \nel / \ne never clash.
+  s = s.replace(/\\[A-Za-zČčŠšŽž]+/g, (m) => {
+    const name = m.slice(1);
+    return Object.prototype.hasOwnProperty.call(LMZ_MAP, name) ? LMZ_MAP[name] : m;
+  });
+
+  // Comparisons and operators. Surrounding spaces are normalized so that the
+  // result is symmetric: "1+3", "1+ 3" and "1 + 3" all become "1 + 3".
+  s = s.replace(/\s*<=\s*/g, ' \\le ').replace(/\s*>=\s*/g, ' \\ge ');
+  s = s.replace(/\s*\*\s*/g, ' \\cdot ').replace(/\s*:\s*/g, ' \\div ');
+  // Percent sign. (Lines starting with "%" are comments and never get here.)
+  s = s.replace(/%/g, '\\%');
+
+  return s;
+}
+
+// Reference sample: the worked examples from the LMZ spec, one formula per
+// line, grouped by "%" section headers. SAMPLE_LATEX is derived from it, so
+// both notations always show the same content.
+const SAMPLE_LMZ = `% Osnovne operacije
+1 + 3 = 4
+10 - 2 = 8
+3 * 4 = 12
+10 : 2 = 5
+(a + b)(a - b) =
+4(x - y) + 5(x + y) =
+(a + b) : ab =
+
+% Eksponenti in indeksi
+x^{y}
+3^{2} + 4^{2} = 25
+2^{3xy}
+x_{y}
+o_{p} = 2a + 2b
+p(x) = a_{n}x^{n} + a_{n - 1}x^{n - 1} + ...
+
+% Ulomki
+\\ul{6}{3} = 2
+3\\ul{1}{2} = \\ul{7}{2}
+\\ul{x + 1}{x - 1} = z
+\\ul{x}{4} + \\ul{x - 5}{2} + \\ul{1}{8} = 1
+\\ul{\\ul{x + 1}{2}}{\\ul{x^{2} - 1}{8}} =
+
+% Korenjenje
+\\kor{x} = y
+\\kor{x - 1} = y
+\\kor{(3^{3} - 7) * 5 + 21} = y
+\\ul{2}{\\kor{7}} = \\ul{2 * \\kor{7}}{\\kor{7} * \\kor{7}} = \\ul{2 * \\kor{7}}{7}
+\\kor[n]{x}
+\\kor[3]{(\\ul{1}{10})^{4}b^{-1}}
+
+% Odstotki in promili
+70 % = 0,7
+70 \\promil = 0,07
+
+% Razmerja
+y : x = 5 : 1
+7 : x = y : 8
+
+% Večje, manjše, neenako
+x < 10
+y > 15
+10 <= x <= 20
+-20 >= y >= -50
+c^{2} \\nen a^{2} + b^{2}
+
+% Množice
+B = {2, 4, 6, 8, 10}
+A = {n \\el N; 2 < n <= 8}
+A \\uni B = C
+{2, 4, 6, 8, 10, 12} \\pre {3, 6, 9, 12} = {6, 12}
+x \\el N, y \\nel R
+N \\podm Z \\podm Q \\podm R \\podm C
+R^{-} = (-\\nesk, 0)
+R_{0}^{+} = [0, \\nesk)
+R = (-\\nesk, \\nesk)
+A = {}
+A - B = {x; (x \\el A) \\hkrati (x \\nel B)}
+
+% Geometrija
+a \\pk b, c \\pk d
+a \\vz b, b \\pk c
+Z_{s}: \\tri ABC \\v \\tri A'B'C'
+\\tri ABC \\sklad \\tri A'B'C'
+\\kot ASB, \\kot BSC, \\kot CSA
+
+% Grške črke
+\\alfa, \\beta, \\gama, \\delta, \\epsilon, \\zeta, \\eta, \\theta, \\jota, \\kapa, \\lambda, \\mi, \\ni, \\ksi, \\omikron, \\pi, \\ro, \\sigma, \\tau, \\ipsilon, \\fi, \\hi, \\psi, \\omega
+p = \\pi * r^{2}
+o = 2\\pi * r
+\\alfa + \\beta + \\gama = 180°
+
+% Kotne funkcije
+\\sin x = \\ul{a}{b}
+\\sin^{2} x + \\cos^{2} x = 1
+\\tan (\\pi \\pm x) = \\pm \\tan x
+\\alfa = 45° 40' 30''
+
+% Vsota in produkt
+\\sum_{i = 1}^{7} (3 * 2^{i + 1})
+\\sum_{i = 1}^{n} (w_{i}e^{x_{i}}f(x_{i}))
+\\prod_{i = 1}^{n} x_{i} = x_{1}x_{2}...x_{n}
+
+% Integral in odvod
+\\int x^{6} dx =
+\\int (\\ul{1 - x}{x})^{2} dx =
+\\int_{2}^{4} x^{3} dx =
+u'v + uv'
+\\ul{u'v - uv'}{v^{2}}
+
+% Logaritmi
+\\ln \\ul{1 + x}{1 - x}
+\\log 2 = 0,30103
+\\log_{b} 1 = 0
+\\log_{a}^{2} x =
+
+% Limite
+\\lim_{x \\v \\nesk} a^{x} = 0
+\\lim_{|x| \\v \\nesk} (1 + \\ul{1}{x})^{x} = e = 2,71828...
+
+% Vektorji
+\\vek{AB} + \\vek{x} = \\vek{AD}
+
+% Deljivost
+7 | 28
+5 \\ne | 24
+
+% Tropičje
+Z = {... -2, -1, 0, 1, 2 ...}
+-1, 3, 7 ...
+1 + 2 + 4 + 8 + ... + x = 524287
+a^{n} = a * a * ... * a
+
+% Operacije nad izjavami
+\\neg A
+A \\hkrati B
+A \\ali B
+A \\sledi B
+A \\ekv B
+
+% Periodična števila
+\\ul{1}{3} = 0,333... = 0,\\črta{3}
+\\ul{1061}{330} = 3,2151515... = 3,2\\črta{15}
+
+% Binomski koeficienti
+(a \\nad b)
+(x + 1) \\nad y
+
+% Sklepni račun
+x = \\ul{3 * 6}{5}`;
+
+function sampleToLatex(sample) {
+  return sample
+    .split('\n')
+    .map((line) => {
+      const trimmed = line.trim();
+      return (!trimmed || trimmed.startsWith('%')) ? line : translateLMZ(trimmed);
+    })
+    .join('\n');
+}
+
+const SAMPLE_LATEX = sampleToLatex(SAMPLE_LMZ);
+
+function sampleFor(mode) {
+  return mode === 'latex' ? SAMPLE_LATEX : SAMPLE_LMZ;
+}
+/* ==== LMZ TRANSLATOR (pure) END ==== */
+
+/* ------------------------------------------------------------------ *
+ * Preview                                                             *
+ * ------------------------------------------------------------------ */
+let renderScheduled = null;
+
+function schedulePreview() {
+  if (renderScheduled) clearTimeout(renderScheduled);
+  renderScheduled = setTimeout(renderPreview, 180);
+}
+
+async function renderPreview() {
+  renderScheduled = null;
+
+  const lines = inputEl.value
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+
+  // "%" lines are comments (section headers); they don't count as formulas.
+  const formulaCount = lines.filter((line) => !line.startsWith('%')).length;
+  countEl.textContent = formatFormulaCount(formulaCount);
+
+  try {
+    await mathReady;
+  } catch (err) {
+    setStatus(err.message, 'error');
+    return;
+  }
+
+  if (window.MathJax.typesetClear) {
+    try { window.MathJax.typesetClear([previewEl]); } catch (e) { /* ignore */ }
+  }
+  previewEl.innerHTML = '';
+  previewEl.classList.toggle('hide-src', !showTexEl.checked);
+
+  if (lines.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'empty';
+    empty.textContent = 'Vnesite eno formulo na vrstico za prikaz predogleda.';
+    previewEl.appendChild(empty);
+    return;
+  }
+
+  let formulaIndex = -1;
+  lines.forEach((line) => {
+    if (line.startsWith('%')) {
+      const head = document.createElement('div');
+      head.className = 'eq-head';
+      head.textContent = line.replace(/^%+\s*/, '');
+      previewEl.appendChild(head);
+      return;
+    }
+
+    formulaIndex += 1;
+    const index = formulaIndex;
+    const latex = toLatex(line);
+
+    const row = document.createElement('div');
+    row.className = 'eq-row';
+
+    const num = document.createElement('span');
+    num.className = 'eq-num';
+    num.textContent = String(index + 1);
+
+    const main = document.createElement('div');
+    main.className = 'eq-main';
+
+    const body = document.createElement('div');
+    body.className = 'eq-body';
+    // MathJax needs delimiters to find the math; give it display math.
+    body.textContent = '$$' + latex + '$$';
+    main.appendChild(body);
+
+    if (currentMode() === 'lmz') {
+      const src = document.createElement('div');
+      src.className = 'eq-src';
+      src.textContent = latex;
+      main.appendChild(src);
+    }
+
+    const btn = document.createElement('button');
+    btn.className = 'eq-dl';
+    btn.type = 'button';
+    btn.textContent = '.docx';
+    btn.title = 'Prenesi to enačbo';
+    btn.addEventListener('click', () => downloadSingle(index));
+
+    row.append(num, main, btn);
+    previewEl.appendChild(row);
+  });
+
+  try {
+    await window.MathJax.typesetPromise([previewEl]);
+  } catch (err) {
+    console.warn('MathJax typeset error', err);
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * LaTeX -> OMML                                                       *
+ * ------------------------------------------------------------------ */
+// Large-operator characters that mathml2omml turns into <m:nary>.
+const NARY_RE = /^[\u220f-\u2211\u2229-\u2233\u22c0-\u22c3]$/;
+const NARY_WRAPPERS = ['msubsup', 'munderover', 'msub', 'munder', 'msup', 'mover'];
+
+// mathml2omml only fills the n-ary body (<m:e>) when the operand is an
+// <mrow>. MathJax emits operands as bare siblings, which corrupts the
+// following relation (e.g. the "=" in a sum). Wrap the operand first.
+function normalizeNaryMathML(mathml) {
+  const doc = new DOMParser().parseFromString(mathml, 'application/xml');
+  const NS = 'http://www.w3.org/1998/Math/MathML';
+
+  for (const mo of Array.from(doc.getElementsByTagName('mo'))) {
+    if (!NARY_RE.test((mo.textContent || '').trim())) continue;
+
+    const parent = mo.parentNode;
+    const opNode = (parent && parent.nodeType === 1 && NARY_WRAPPERS.includes(parent.localName))
+      ? parent
+      : mo;
+
+    let next = opNode.nextSibling;
+    while (next && next.nodeType === 3 && !next.textContent.trim()) next = next.nextSibling;
+
+    if (next && next.nodeType === 1 && next.localName !== 'mrow') {
+      const mrow = doc.createElementNS(NS, 'mrow');
+      next.parentNode.insertBefore(mrow, next);
+      mrow.appendChild(next);
+    }
+  }
+
+  return new XMLSerializer().serializeToString(doc.documentElement);
+}
+
+/* ==== OMML ESCAPE (pure) START ==== */
+// mathml2omml does not escape XML-special characters in text nodes, but OMML
+// text only ever lives in <m:t> elements. Escape those so document.xml stays
+// valid XML (a raw "<" otherwise truncates the document when opened in Word).
+function escapeOmmlText(omml) {
+  return omml.replace(/(<m:t\b[^>]*>)([\s\S]*?)(<\/m:t>)/g, (full, open, text, close) =>
+    open +
+    text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') +
+    close
+  );
+}
+/* ==== OMML ESCAPE (pure) END ==== */
+
+function ommlFor(latex) {
+  const mml = window.MathJax.tex2mml(latex, { display: true });
+  if (/<merror[\s>]/.test(mml)) {
+    throw new Error('Napaka pri razčlenjevanju TeX-a');
+  }
+  return escapeOmmlText(mml2omml(normalizeNaryMathML(mml)).trim());
+}
+
+/* ------------------------------------------------------------------ *
+ * Minimal .docx assembly                                              *
+ * ------------------------------------------------------------------ */
+const CONTENT_TYPES = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+  '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' +
+  '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>' +
+  '<Default Extension="xml" ContentType="application/xml"/>' +
+  '<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>' +
+  '<Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>' +
+  '<Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>' +
+  '<Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/>' +
+  '</Types>';
+
+const ROOT_RELS = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+  '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+  '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>' +
+  '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/>' +
+  '<Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties" Target="docProps/app.xml"/>' +
+  '</Relationships>';
+
+const DOC_RELS = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+  '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+  '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>' +
+  '</Relationships>';
+
+const STYLES_XML = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+  '<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">' +
+  '<w:docDefaults><w:rPrDefault><w:rPr>' +
+  '<w:rFonts w:ascii="Cambria Math" w:hAnsi="Cambria Math" w:cs="Cambria Math"/>' +
+  '<w:sz w:val="24"/>' +
+  '</w:rPr></w:rPrDefault><w:pPrDefault/></w:docDefaults>' +
+  '<w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/><w:qFormat/></w:style>' +
+  '</w:styles>';
+
+const CORE_XML = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+  '<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" ' +
+  'xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" ' +
+  'xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">' +
+  '<dc:title>Enačbe</dc:title><dc:creator>LaTeX to DOCX</dc:creator>' +
+  '<cp:lastModifiedBy>LaTeX to DOCX</cp:lastModifiedBy>' +
+  '<dcterms:created xsi:type="dcterms:W3CDTF">2024-01-01T00:00:00Z</dcterms:created>' +
+  '<dcterms:modified xsi:type="dcterms:W3CDTF">2024-01-01T00:00:00Z</dcterms:modified>' +
+  '</cp:coreProperties>';
+
+const APP_XML = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+  '<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties" ' +
+  'xmlns:vt="http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes">' +
+  '<Application>LaTeX to DOCX</Application>' +
+  '</Properties>';
+
+function documentXml(ommlXmls) {
+  const body = ommlXmls.map((omml) =>
+    '<w:p><m:oMathPara><m:oMathParaPr><m:jc m:val="center"/></m:oMathParaPr>' +
+    omml +
+    '</m:oMathPara></w:p>'
+  ).join('');
+
+  return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+    '<w:document ' +
+    'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" ' +
+    'xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math" ' +
+    'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">' +
+    '<w:body>' + body +
+    '<w:sectPr><w:pgSz w:w="12240" w:h="15840"/>' +
+    '<w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440"/></w:sectPr>' +
+    '</w:body></w:document>';
+}
+
+function buildDocx(formulas) {
+  const ommlXmls = [];
+  const errors = [];
+  formulas.forEach((latex, i) => {
+    try {
+      ommlXmls.push(ommlFor(latex));
+    } catch (err) {
+      errors.push({ index: i, latex, message: err.message || String(err) });
+    }
+  });
+
+  const bytes = zipSync({
+    '[Content_Types].xml': strToU8(CONTENT_TYPES),
+    '_rels/.rels': strToU8(ROOT_RELS),
+    'word/document.xml': strToU8(documentXml(ommlXmls)),
+    'word/_rels/document.xml.rels': strToU8(DOC_RELS),
+    'word/styles.xml': strToU8(STYLES_XML),
+    'docProps/core.xml': strToU8(CORE_XML),
+    'docProps/app.xml': strToU8(APP_XML),
+  }, { level: 6 });
+
+  return { bytes, errors, count: ommlXmls.length };
+}
+
+const DOCX_MIME = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+
+function saveBytes(bytes, filename) {
+  const blob = new Blob([bytes], { type: DOCX_MIME });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+
+/* ------------------------------------------------------------------ *
+ * Actions                                                             *
+ * ------------------------------------------------------------------ */
+async function downloadAll() {
+  const formulas = parsedFormulas(inputEl.value);
+  if (formulas.length === 0) {
+    setStatus('Ničesar ni za pretvorbo — vnesite vsaj eno formulo.', 'error');
+    return;
+  }
+  downloadAllBtn.disabled = true;
+  try {
+    await mathReady;
+    const { bytes, errors, count } = buildDocx(formulas);
+    if (count === 0) throw new Error('Ni veljavnih formul za izvoz.');
+    saveBytes(bytes, 'enacbe.docx');
+    if (errors.length) {
+      setStatus(formatEqDownloaded(count) + ' ' + formatSkippedLines(errors.map((e) => e.index + 1)), 'error');
+    } else {
+      setStatus(formatEqDownloaded(count), 'ok');
+    }
+  } catch (err) {
+    setStatus('Napaka: ' + (err && err.message ? err.message : String(err)), 'error');
+  } finally {
+    downloadAllBtn.disabled = false;
+  }
+}
+
+async function downloadSingle(index) {
+  const formulas = parsedFormulas(inputEl.value);
+  const latex = formulas[index];
+  if (!latex) return;
+  try {
+    await mathReady;
+    const { bytes } = buildDocx([latex]);
+    saveBytes(bytes, 'enacba-' + (index + 1) + '.docx');
+    setStatus('Prenesena enačba ' + (index + 1) + '.', 'ok');
+  } catch (err) {
+    setStatus('Napaka v vrstici ' + (index + 1) + ': ' + (err && err.message ? err.message : String(err)), 'error');
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * Wire up                                                             *
+ * ------------------------------------------------------------------ */
+// Restore saved preferences (defaults: LMZ, translation shown).
+const savedMode = load('lmz.mode');
+if (savedMode === 'latex' || savedMode === 'lmz') modeEl.value = savedMode;
+if (load('lmz.showtex') === '0') showTexEl.checked = false;
+previewEl.classList.toggle('hide-src', !showTexEl.checked);
+showTexWrap.hidden = currentMode() !== 'lmz';
+
+// Seed the sample for the active mode; when the mode is switched, swap the
+// sample too — but only if the textarea still holds the untouched sample.
+let lastMode = currentMode();
+inputEl.value = sampleFor(lastMode);
+
+inputEl.addEventListener('input', schedulePreview);
+downloadAllBtn.addEventListener('click', downloadAll);
+modeEl.addEventListener('change', () => {
+  const next = currentMode();
+  if (inputEl.value.trim() === sampleFor(lastMode).trim()) {
+    inputEl.value = sampleFor(next);
+  }
+  lastMode = next;
+  showTexWrap.hidden = next !== 'lmz';
+  store('lmz.mode', modeEl.value);
+  schedulePreview();
+});
+showTexEl.addEventListener('change', () => {
+  store('lmz.showtex', showTexEl.checked ? '1' : '0');
+  previewEl.classList.toggle('hide-src', !showTexEl.checked);
+});
+document.addEventListener('keydown', (e) => {
+  if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') {
+    e.preventDefault();
+    downloadAll();
+  }
+});
+
+// Initial render once the engine is up.
+mathReady.then(() => {
+  setStatus('Pripravljeno.', 'ready');
+  renderPreview();
+}).catch((err) => setStatus(err.message, 'error'));
+
+/* Test hook (used by automated checks). */
+window.__latex2docx = {
+  ready: mathReady,
+  translate: translateLMZ,
+  build: (text) => buildDocx(parsedFormulas(text)),
+};
+</script>
+</body>
+</html>
